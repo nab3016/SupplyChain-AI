@@ -1,5 +1,5 @@
+
 """
-app/services/llm_service/llm_connector.py
 Live LLM connector using Google Gemini API (google-genai SDK).
 Requires LLM_API_KEY in .env — set to your Google AI Studio API key.
 Get a free key at: https://aistudio.google.com/app/apikey
@@ -26,7 +26,7 @@ _SYSTEM_PROMPT = (
     "- If compliance violations exist, mention them.\n"
     "- End with the confidence score.\n"
     "- Do NOT use bullet points or headers — flowing prose only.\n"
-    "- Keep the response under 120 words."
+    "- Keep the response to 4-6 complete sentences. Always finish your final sentence fully."
 )
 
 
@@ -164,7 +164,7 @@ def generate_explanation(context: Dict[str, Any]) -> str:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{_MODEL}:generateContent"
         payload = {
             "contents": [{"parts": [{"text": _build_prompt(context)}]}],
-            "generationConfig": {"maxOutputTokens": 512, "temperature": 0.4},
+            "generationConfig": {"maxOutputTokens": 1024, "temperature": 0.5},
         }
         resp = _req.post(url, params={"key": api_key}, json=payload, timeout=15)
         resp.raise_for_status()

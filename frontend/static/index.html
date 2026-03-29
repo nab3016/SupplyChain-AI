@@ -242,6 +242,9 @@ select.field-ctrl{cursor:pointer}
  
 /* ── AUDIT LOG ── */
 .audit-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r3);overflow:hidden;display:none}
+.view-section{display:flex;flex-direction:column;gap:28px}
+.kpi-val.a{color:var(--amber)}
+.kpi-val.r{color:var(--red)}
 .audit-head{padding:22px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .audit-title{font-size:16px;font-weight:600;color:var(--text)}
 .audit-scroll{max-height:400px;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:9px}
@@ -334,16 +337,16 @@ select.field-ctrl{cursor:pointer}
     Supply<em>Mind</em> AI
   </a>
   <nav class="nav">
-    <button class="nav-btn active">Dashboard</button>
-    <button class="nav-btn">Fleet Monitor</button>
-    <button class="nav-btn">Route Map</button>
-    <button class="nav-btn">Analytics</button>
-    <button class="nav-btn">Audit Trail</button>
+    <button class="nav-btn active" data-section="dashboard">Dashboard</button>
+    <button class="nav-btn" data-section="fleet">Fleet Monitor</button>
+    <button class="nav-btn" data-section="routemap">Route Map</button>
+    <button class="nav-btn" data-section="analytics">Analytics</button>
+    <button class="nav-btn" data-section="audit">Audit Trail</button>
   </nav>
   <div class="topbar-right">
-    <div class="live-badge"><div class="live-dot"></div>LIVE STREAM</div>
-    <button class="t-btn">Export Report</button>
-    <button class="t-btn primary">+ New Shipment</button>
+    <div class="live-badge"><div class="live-dot" id="liveDot"></div><span id="liveText">LIVE STREAM</span></div>
+    <button class="t-btn" onclick="exportReport()">Export Report</button>
+    <button class="t-btn primary" onclick="newShipment()">+ New Shipment</button>
   </div>
 </header>
  
@@ -354,10 +357,10 @@ select.field-ctrl{cursor:pointer}
   <aside class="sidebar">
     <div>
       <div class="sb-section-label">Active Shipments</div>
-      <div class="sb-item active"><div class="sb-icon">🚢</div>All Shipments<span class="sb-badge ok">142</span></div>
-      <div class="sb-item"><div class="sb-icon">⚠️</div>At Risk<span class="sb-badge err">7</span></div>
-      <div class="sb-item"><div class="sb-icon">🔄</div>Rerouted<span class="sb-badge warn">4</span></div>
-      <div class="sb-item"><div class="sb-icon">✅</div>On Schedule<span class="sb-badge ok">131</span></div>
+      <div class="sb-item active" onclick="showSection('fleet');filterFleet('all')"><div class="sb-icon">🚢</div>All Shipments<span class="sb-badge ok" id="sbBadgeAll">142</span></div>
+      <div class="sb-item" onclick="showSection('fleet');filterFleet('AT_RISK')"><div class="sb-icon">⚠️</div>At Risk<span class="sb-badge err" id="sbBadgeRisk">7</span></div>
+      <div class="sb-item" onclick="showSection('fleet');filterFleet('DELAYED')"><div class="sb-icon">🔄</div>Rerouted<span class="sb-badge warn" id="sbBadgeDelayed">4</span></div>
+      <div class="sb-item" onclick="showSection('fleet');filterFleet('ON_SCHEDULE')"><div class="sb-icon">✅</div>On Schedule<span class="sb-badge ok" id="sbBadgeOk">131</span></div>
     </div>
     <div>
       <div class="sb-section-label">Agent Health</div>
@@ -391,6 +394,7 @@ select.field-ctrl{cursor:pointer}
   <!-- MAIN CONTENT -->
   <main class="main">
  
+    <div id="section-dashboard" class="view-section">
     <!-- PAGE HEADER -->
     <div class="ph-row">
       <div>
@@ -576,7 +580,7 @@ select.field-ctrl{cursor:pointer}
       <div class="table-panel">
         <div style="padding:22px 26px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
           <div><div style="font-size:15px;font-weight:600;color:var(--text)">Active Shipments</div><div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:2px">Live fleet · click row to map route</div></div>
-          <button class="t-btn" style="font-size:11px">View All</button>
+          <button class="t-btn" style="font-size:11px" onclick="showSection('fleet')">View All</button>
         </div>
         <div style="padding:22px 26px">
           <table class="ship-table">
@@ -659,6 +663,100 @@ select.field-ctrl{cursor:pointer}
       </div>
     </div>
  
+    </div><!-- /section-dashboard -->
+
+    <!-- ═══════════════════ FLEET MONITOR SECTION ═══════════════════ -->
+    <div id="section-fleet" class="view-section" style="display:none">
+      <div class="ph-row" style="margin-bottom:0">
+        <div>
+          <div class="ph-eyebrow">Real-time Tracking</div>
+          <div class="ph-title" style="font-size:38px">Fleet<span> Monitor</span></div>
+          <div class="ph-sub">Live status of all tracked shipments with risk tier and ETA.</div>
+        </div>
+        <div class="ph-kpis" id="fleetKpis"></div>
+      </div>
+      <div class="table-panel" id="fleetTable">
+        <div style="padding:40px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:12px">Loading fleet data...</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════ ANALYTICS SECTION ═══════════════════════ -->
+    <div id="section-analytics" class="view-section" style="display:none">
+      <div class="ph-row" style="margin-bottom:0">
+        <div>
+          <div class="ph-eyebrow">Insights &amp; Performance</div>
+          <div class="ph-title" style="font-size:38px">Analytics<span> Hub</span></div>
+          <div class="ph-sub">Aggregated metrics across shipments, suppliers, routes, and pipeline runs.</div>
+        </div>
+      </div>
+      <div class="metric-strip" id="analyticsMetrics">
+        <div class="mc" style="text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:11px;grid-column:span 4;padding:40px">Loading analytics...</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px">
+        <div class="table-panel" id="analyticsSuppliers">
+          <div style="padding:22px 26px;border-bottom:1px solid var(--border)">
+            <div class="fp-title">Supplier Performance</div>
+            <div class="fp-sub">Ranked by reliability score</div>
+          </div>
+          <div style="padding:20px 26px;color:var(--text3);font-family:var(--font-mono);font-size:11px">Loading...</div>
+        </div>
+        <div class="table-panel" id="analyticsRoutes">
+          <div style="padding:22px 26px;border-bottom:1px solid var(--border)">
+            <div class="fp-title">Route Risk Scores</div>
+            <div class="fp-sub">All tracked routes by risk level</div>
+          </div>
+          <div style="padding:20px 26px;color:var(--text3);font-family:var(--font-mono);font-size:11px">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════ ROUTE MAP SECTION ════════════════════════ -->
+    <div id="section-routemap" class="view-section" style="display:none">
+      <div class="ph-row" style="margin-bottom:0">
+        <div>
+          <div class="ph-eyebrow">Interactive Mapping</div>
+          <div class="ph-title" style="font-size:38px">Route<span> Map</span></div>
+          <div class="ph-sub">Run an analysis from the Dashboard to visualise primary and alternate routes here.</div>
+        </div>
+      </div>
+      <div class="map-panel" style="min-height:520px">
+        <div style="padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px">
+          <button class="map-tab active" id="tabPrimary2" onclick="switchMapTab('primary')">Primary</button>
+          <button class="map-tab" id="tabReroute2" onclick="switchMapTab('reroute')">Reroute</button>
+          <button class="map-tab" id="tabBoth2" onclick="switchMapTab('both')">Both</button>
+          <span style="margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--text3)" id="mapSubtitle2">No route loaded — run analysis on Dashboard first</span>
+        </div>
+        <div id="routeMap2" style="flex:1;min-height:460px;background:var(--bg3)"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════ AUDIT TRAIL SECTION ══════════════════════ -->
+    <div id="section-audit" class="view-section" style="display:none">
+      <div class="ph-row" style="margin-bottom:0">
+        <div>
+          <div class="ph-eyebrow">Full Traceability</div>
+          <div class="ph-title" style="font-size:38px">Audit<span> Trail</span></div>
+          <div class="ph-sub">Immutable log of every pipeline run — all 7 agent decisions with timestamps.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="t-btn" onclick="exportReport('json')" style="font-size:11px">Export JSON</button>
+          <button class="t-btn" onclick="exportReport('csv')" style="font-size:11px">Export CSV</button>
+        </div>
+      </div>
+      <div class="audit-panel" id="auditHistoryPanel" style="display:block">
+        <div class="audit-head">
+          <div>
+            <div class="audit-title">Pipeline History</div>
+            <div id="auditHistoryMeta" style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:3px">Loading audit logs from backend...</div>
+          </div>
+          <div class="risk-chip low" id="auditHistoryChip">● VERIFIED</div>
+        </div>
+        <div class="audit-scroll" id="auditHistoryScroll">
+          <div style="padding:30px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:11px">Loading...</div>
+        </div>
+      </div>
+    </div>
+
     <div class="footer">SupplyMind AI &nbsp;·&nbsp; ET AI Hackathon 2026 &nbsp;·&nbsp; Problem Statement 5 &nbsp;·&nbsp; Avataar.ai × Unstop</div>
   </main>
 </div>
@@ -1310,6 +1408,8 @@ async function runAnalysis() {
 
   btn.disabled=false;
   btn.textContent='▶  RUN 7-AGENT ANALYSIS';
+  // Invalidate cached section data so next visit fetches fresh results
+  invalidateSectionCaches();
 }
 
 /* ═══════════════════════════════════════════
@@ -1352,25 +1452,507 @@ function buildAuditLog(shipId, auditId, dist, risk, decision, auditSteps) {
 }
 
 /* ═══════════════════════════════════════════
-   NAV + MISC
+   VIEW ROUTER
 ═══════════════════════════════════════════ */
-document.querySelectorAll('.nav-btn').forEach(btn=>{
-  btn.addEventListener('click',function(){
-    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-    this.classList.add('active');
+const SECTIONS = ['dashboard','fleet','routemap','analytics','audit'];
+
+function showSection(name) {
+  SECTIONS.forEach(id => {
+    const el = document.getElementById('section-'+id);
+    if (el) el.style.display = (id === name) ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.section === name);
+  });
+  if (name === 'audit')     loadAuditHistory();
+  if (name === 'fleet')     loadFleet();
+  if (name === 'analytics') loadAnalytics();
+  if (name === 'routemap')  syncRouteMapSection();
+}
+
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    showSection(this.dataset.section || 'dashboard');
   });
 });
-document.querySelectorAll('.sb-item').forEach(item=>{
-  item.addEventListener('click',function(){
-    document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+
+document.querySelectorAll('.sb-item').forEach(item => {
+  item.addEventListener('click', function() {
+    document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
     this.classList.add('active');
   });
 });
 
+/* ═══════════════════════════════════════════
+   EXPORT REPORT
+═══════════════════════════════════════════ */
+function exportReport(format) {
+  const fmt = format || 'csv';
+  const url = `${BACKEND}/export/audit-logs/${fmt}`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/* ═══════════════════════════════════════════
+   NEW SHIPMENT
+═══════════════════════════════════════════ */
+function newShipment() {
+  showSection('dashboard');
+  // Reset form fields
+  ['shipId','supplier','originInput','destInput','value'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const cargo = document.getElementById('cargo');
+  if (cargo) cargo.selectedIndex = 0;
+  const priority = document.getElementById('priority');
+  if (priority) priority.selectedIndex = 0;
+  // Reset SLA to 14 days out
+  const dl = new Date(); dl.setDate(dl.getDate()+14);
+  const sla = document.getElementById('sla');
+  if (sla) sla.value = dl.toISOString().split('T')[0];
+  // Clear origin/dest state
+  window.originCity = null;
+  window.destCity = null;
+  const badge = document.getElementById('distBadge');
+  if (badge) { badge.className='dist-badge'; badge.innerHTML='<span>🗺️</span><span>— km &nbsp; Select origin and destination to calculate route distance</span>'; }
+  // Hide result and audit panels
+  const rc = document.getElementById('resultCard');
+  if (rc) rc.style.display='none';
+  const ap = document.getElementById('auditPanel');
+  if (ap) ap.style.display='none';
+  // Scroll to form
+  setTimeout(() => {
+    const fp = document.querySelector('.form-panel');
+    if (fp) fp.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 80);
+}
+
+/* ═══════════════════════════════════════════
+   CSV BULK UPLOAD
+═══════════════════════════════════════════ */
 const uz = document.getElementById('uploadZone');
-uz.addEventListener('dragover',e=>{e.preventDefault();uz.style.borderColor='rgba(0,229,195,.4)'});
-uz.addEventListener('dragleave',()=>uz.style.borderColor='');
-uz.addEventListener('drop',e=>{e.preventDefault();uz.innerHTML='<p style="color:var(--teal)">✓ File loaded — ready for batch analysis</p>';});
+uz.addEventListener('dragover', e => { e.preventDefault(); uz.style.borderColor='rgba(0,229,195,.4)'; });
+uz.addEventListener('dragleave', () => uz.style.borderColor='');
+uz.addEventListener('drop', e => {
+  e.preventDefault();
+  uz.style.borderColor='';
+  const file = e.dataTransfer.files[0];
+  if (file) handleCsvUpload(file);
+});
+uz.addEventListener('click', () => {
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='.csv';
+  inp.onchange = e => { if (e.target.files[0]) handleCsvUpload(e.target.files[0]); };
+  inp.click();
+});
+
+async function handleCsvUpload(file) {
+  if (!file.name.endsWith('.csv')) {
+    uz.innerHTML='<p style="color:var(--red)">❌ Only .csv files are supported</p>';
+    return;
+  }
+  uz.innerHTML='<p style="color:var(--amber)">⏳ Uploading and analysing...</p>';
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await fetch(`${BACKEND}/analyze/csv`, { method:'POST', body: formData });
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    const data = await res.json();
+    const processed = data.processed ?? 0;
+    const total = data.total_records ?? 0;
+    const errors = (data.errors_in_csv ?? []).length;
+    uz.innerHTML = `<p style="color:var(--teal)">✓ Processed ${processed}/${total} shipments${errors>0?' · '+errors+' errors':''}</p><p style="font-size:11px;color:var(--text3);margin-top:4px">${file.name}</p>`;
+    renderCsvResults(data.results ?? []);
+  } catch(err) {
+    uz.innerHTML=`<p style="color:var(--red)">❌ Upload failed: ${err.message}</p>`;
+  }
+}
+
+function renderCsvResults(results) {
+  if (!results.length) return;
+  let existing = document.getElementById('csvResultsPanel');
+  if (!existing) {
+    existing = document.createElement('div');
+    existing.id = 'csvResultsPanel';
+    existing.style.cssText = 'margin-top:16px;border:1px solid var(--border);border-radius:14px;overflow:hidden';
+    document.querySelector('.fp-body').appendChild(existing);
+  }
+  const rows = results.map(r => {
+    if (r.error) return `<tr><td style="color:var(--red)">${r.shipment_id||'—'}</td><td colspan="4" style="color:var(--red)">Error: ${r.error}</td></tr>`;
+    const rC = r.risk_score>65?'var(--red)':r.risk_score>45?'var(--amber)':'var(--teal)';
+    return `<tr>
+      <td>${r.origin} → ${r.destination}</td>
+      <td>${r.supplier_name}</td>
+      <td style="color:${rC};font-family:var(--font-mono)">${Math.round(r.risk_score)}/100</td>
+      <td style="color:${r.decision==='PROCEED'?'var(--teal)':'var(--blue)'};font-family:var(--font-mono)">${r.decision}</td>
+      <td style="color:var(--text3);font-size:11px">${r.trace_id?.slice(-8)||'—'}</td>
+    </tr>`;
+  }).join('');
+  existing.innerHTML = `
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text)">Batch Results — ${results.length} shipments</div>
+    <div style="overflow-x:auto">
+    <table class="ship-table" style="width:100%;padding:0 18px">
+      <thead><tr>
+        <th style="padding:12px 18px">Route</th><th>Supplier</th><th>Risk</th><th>Decision</th><th>Trace</th>
+      </tr></thead>
+      <tbody style="font-size:12px">${rows}</tbody>
+    </table></div>`;
+}
+
+/* ═══════════════════════════════════════════
+   FLEET MONITOR
+═══════════════════════════════════════════ */
+let fleetLoaded = false;
+async function loadFleet() {
+  if (fleetLoaded) return;
+  try {
+    const res = await fetch(`${BACKEND}/fleet`);
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    fleetLoaded = true;
+    _allFleetShipments = data.shipments || [];
+    renderFleet(data);
+  } catch(e) {
+    document.getElementById('fleetTable').innerHTML =
+      `<div style="padding:40px;text-align:center;color:var(--red);font-family:var(--font-mono);font-size:12px">Failed to load fleet data: ${e.message}</div>`;
+  }
+}
+
+function renderFleet(data) {
+  const s = data.summary || {};
+  const kpis = [
+    {v: s.total||0, l:'Total', c:''},
+    {v: s.on_schedule||0, l:'On Schedule', c:'t'},
+    {v: s.at_risk||0, l:'At Risk', c:'a'},
+    {v: s.delayed||0, l:'Delayed', c:'r'},
+  ];
+  document.getElementById('fleetKpis').innerHTML = kpis.map(k =>
+    `<div class="kpi"><div class="kpi-val${k.c?' '+k.c:''}">${k.v}</div><div class="kpi-lbl">${k.l}</div></div>`
+  ).join('');
+
+  const STATUS_STYLE = {
+    ON_SCHEDULE: 'var(--teal)',
+    IN_TRANSIT:  'var(--blue)',
+    AT_RISK:     'var(--amber)',
+    DELAYED:     'var(--red)',
+  };
+  const TIER_STYLE = {
+    LOW:'var(--teal2)', MEDIUM:'var(--amber)', HIGH:'var(--red)', CRITICAL:'var(--red)'
+  };
+
+  const rows = (data.shipments||[]).map(ship => {
+    const sc = STATUS_STYLE[ship.status]||'var(--text2)';
+    const tc = TIER_STYLE[ship.risk_tier]||'var(--text2)';
+    const pct = ship.progress_pct||0;
+    return `<tr>
+      <td style="font-family:var(--font-mono);color:var(--text)">${ship.shipment_id}</td>
+      <td>${ship.origin} → ${ship.destination}</td>
+      <td style="max-width:160px;font-size:12px">${ship.supplier_name}</td>
+      <td><span style="color:${sc};font-family:var(--font-mono);font-size:11px">● ${ship.status.replace('_',' ')}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:4px;background:var(--border2);border-radius:2px;min-width:60px">
+            <div style="width:${pct}%;height:4px;background:${sc};border-radius:2px;transition:width .4s"></div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text3)">${pct}%</span>
+        </div>
+      </td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--text2)">${ship.eta_days}d</td>
+      <td style="color:${tc};font-family:var(--font-mono);font-size:11px">${ship.risk_tier}</td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--text2)">${ship.priority}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('fleetTable').innerHTML = `
+    <div style="padding:22px 26px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div class="fp-title">Active Fleet</div>
+        <div class="fp-sub">${data.shipments.length} shipments tracked · Total value ₹${Math.round((s.total_value_inr||0)/100000)/10}L</div>
+      </div>
+      <button class="t-btn" onclick="exportReport('csv')" style="font-size:11px">Export CSV</button>
+    </div>
+    <div style="overflow-x:auto;padding:0 10px">
+    <table class="ship-table" style="width:100%">
+      <thead><tr>
+        <th>Shipment ID</th><th>Route</th><th>Supplier</th><th>Status</th><th style="min-width:120px">Progress</th>
+        <th>ETA</th><th>Risk Tier</th><th>Priority</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+/* ═══════════════════════════════════════════
+   ANALYTICS
+═══════════════════════════════════════════ */
+let analyticsLoaded = false;
+async function loadAnalytics() {
+  if (analyticsLoaded) return;
+  try {
+    const [overviewRes, suppRes, routeRes] = await Promise.all([
+      fetch(`${BACKEND}/analytics/overview`),
+      fetch(`${BACKEND}/analytics/supplier-performance`),
+      fetch(`${BACKEND}/analytics/route-performance`),
+    ]);
+    const overview = await overviewRes.json();
+    const suppliers = await suppRes.json();
+    const routes = await routeRes.json();
+    analyticsLoaded = true;
+    renderAnalytics(overview, suppliers, routes);
+  } catch(e) {
+    document.getElementById('analyticsMetrics').innerHTML =
+      `<div style="padding:40px;text-align:center;color:var(--red);font-family:var(--font-mono);font-size:12px;grid-column:span 4">Failed to load analytics: ${e.message}</div>`;
+  }
+}
+
+function renderAnalytics(ov, suppData, routeData) {
+  const ship = ov.shipments||{}, supp = ov.suppliers||{}, pipe = ov.pipeline||{}, rt = ov.routes||{};
+  const metrics = [
+    {ico:'🚢', lbl:'Total Shipments', val: ship.total||0, delta:'₹'+Math.round((ship.total_value_inr||0)/10000000)+'Cr value', color:'blue'},
+    {ico:'⚠️', lbl:'Avg Risk Score',  val: (pipe.avg_risk_score||0)+'%', delta:(pipe.total_analyzed||0)+' runs analysed', color:'red'},
+    {ico:'🏭', lbl:'Supplier Reliability', val: Math.round((supp.avg_reliability||0)*100)+'%', delta:supp.high_risk_count+' high-risk suppliers', color:'amber'},
+    {ico:'🗺️', lbl:'Low-Risk Routes', val: rt.low_risk_routes||0, delta:'of '+rt.total+' total routes', color:'teal'},
+  ];
+  document.getElementById('analyticsMetrics').innerHTML = metrics.map(m => `
+    <div class="mc" style="position:relative">
+      <div class="mc-accent ${m.color}"></div>
+      <div class="mc-glow ${m.color}"></div>
+      <div class="mc-ico ${m.color}">${m.ico}</div>
+      <div class="mc-lbl">${m.lbl}</div>
+      <div class="mc-val" style="font-size:36px">${m.val}</div>
+      <div class="mc-delta mid">${m.delta}</div>
+    </div>`).join('');
+
+  // Decision breakdown
+  const decisions = pipe.decisions||{};
+  const decTotal = Object.values(decisions).reduce((a,b)=>a+b,0)||1;
+  const decBars = Object.entries(decisions).map(([d,cnt]) => {
+    const pct = Math.round(cnt/decTotal*100);
+    const c = d==='PROCEED'?'var(--teal)':d==='REROUTE'?'var(--blue)':'var(--amber)';
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="font-family:var(--font-mono);font-size:11px;color:var(--text2);width:80px">${d}</span>
+      <div style="flex:1;height:6px;background:var(--border2);border-radius:3px">
+        <div style="width:${pct}%;height:6px;background:${c};border-radius:3px"></div>
+      </div>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--text3);width:32px;text-align:right">${cnt}</span>
+    </div>`;
+  }).join('') || '<div style="color:var(--text3);font-size:12px;font-family:var(--font-mono)">No pipeline runs yet</div>';
+
+  // Supplier table
+  const suppRows = (suppData.suppliers||[]).slice(0,10).map((s,i) => {
+    const tc = s.risk_tier==='LOW'?'var(--teal2)':s.risk_tier==='MEDIUM'?'var(--amber)':'var(--red)';
+    return `<tr>
+      <td style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">${i+1}</td>
+      <td style="font-size:12px">${s.name}</td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:${Math.round(s.reliability_score*100)>=80?'var(--teal2)':'var(--amber)'}">${Math.round(s.reliability_score*100)}%</td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--text2)">${s.avg_delay_days}d avg</td>
+      <td style="color:${tc};font-family:var(--font-mono);font-size:10px">${s.risk_tier}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('analyticsSuppliers').innerHTML = `
+    <div style="padding:22px 26px;border-bottom:1px solid var(--border)">
+      <div class="fp-title">Supplier Performance</div>
+      <div class="fp-sub">Ranked by reliability score · ${(suppData.suppliers||[]).length} suppliers</div>
+    </div>
+    <div style="padding:16px 10px">
+      <table class="ship-table" style="width:100%">
+        <thead><tr><th>#</th><th>Supplier</th><th>Reliability</th><th>Avg Delay</th><th>Risk Tier</th></tr></thead>
+        <tbody>${suppRows}</tbody>
+      </table>
+    </div>
+    <div style="padding:18px 26px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:12px">Decision Distribution (Pipeline Runs)</div>
+      ${decBars}
+    </div>`;
+
+  // Route table
+  const routeRows = (routeData.routes||[]).map(r => {
+    const rc = r.risk_score>60?'var(--red)':r.risk_score>35?'var(--amber)':'var(--teal2)';
+    return `<tr>
+      <td style="font-family:var(--font-mono);font-size:10px;color:var(--text3)">${r.route_id}</td>
+      <td style="font-size:11px;max-width:180px">${r.route_name}</td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--text2)">${Math.round(r.distance_km).toLocaleString()} km</td>
+      <td style="color:${rc};font-family:var(--font-mono);font-size:11px">${r.risk_score}</td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--text2)">₹${Math.round(r.freight_cost/1000)}K</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('analyticsRoutes').innerHTML = `
+    <div style="padding:22px 26px;border-bottom:1px solid var(--border)">
+      <div class="fp-title">Route Risk Scores</div>
+      <div class="fp-sub">${(routeData.routes||[]).length} routes · Avg risk ${rt.avg_risk_score}</div>
+    </div>
+    <div style="padding:16px 10px">
+      <table class="ship-table" style="width:100%">
+        <thead><tr><th>ID</th><th>Route</th><th>Distance</th><th>Risk</th><th>Cost</th></tr></thead>
+        <tbody>${routeRows}</tbody>
+      </table>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   AUDIT HISTORY (nav tab fetch)
+═══════════════════════════════════════════ */
+let auditHistoryLoaded = false;
+async function loadAuditHistory() {
+  if (auditHistoryLoaded) return;
+  try {
+    const res = await fetch(`${BACKEND}/audit/logs?limit=100`);
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    auditHistoryLoaded = true;
+    renderAuditHistory(data.logs||[], data.total||0);
+  } catch(e) {
+    document.getElementById('auditHistoryMeta').textContent = `Failed to load: ${e.message}`;
+    document.getElementById('auditHistoryScroll').innerHTML =
+      `<div style="padding:30px;text-align:center;color:var(--red);font-family:var(--font-mono);font-size:11px">Backend error: ${e.message}</div>`;
+  }
+}
+
+function renderAuditHistory(logs, total) {
+  document.getElementById('auditHistoryMeta').textContent =
+    `${total} total entries · Showing last ${logs.length} · Auto-refresh on next visit`;
+  if (!logs.length) {
+    document.getElementById('auditHistoryScroll').innerHTML =
+      '<div style="padding:30px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:11px">No audit logs found. Run an analysis first.</div>';
+    return;
+  }
+  const reversed = [...logs].reverse();
+  document.getElementById('auditHistoryScroll').innerHTML = reversed.map(log => {
+    const ts = log.timestamp ? new Date(log.timestamp) : new Date();
+    const risk = log.risk_score ?? 0;
+    const rC = risk>65?'var(--red)':risk>45?'var(--amber)':'var(--teal)';
+    const dC = log.decision==='PROCEED'?'var(--teal)':'var(--blue)';
+    return `<div class="audit-step success" style="cursor:default">
+      <div class="adot"></div>
+      <div style="flex:1;min-width:0">
+        <div class="audit-agent">${log.origin||'—'} → ${log.destination||'—'}
+          <span style="color:${dC};font-size:10px;margin-left:8px;font-family:var(--font-mono)">● ${log.decision||'—'}</span>
+          <span style="color:${rC};font-size:10px;margin-left:8px;font-family:var(--font-mono)">Risk ${risk}/100</span>
+        </div>
+        <div class="audit-summary">${log.supplier_name||'Unknown supplier'} · ₹${Math.round((log.cost_impact_inr||0)).toLocaleString()} impact · ${(log.estimated_delay_days||0).toFixed(1)}d delay</div>
+        <div class="audit-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.textContent=this.nextElementSibling.classList.contains('open')?'▼ Hide':'▶ View raw'">▶ View raw</div>
+        <div class="audit-raw">${JSON.stringify({trace_id:log.trace_id,origin:log.origin,destination:log.destination,decision:log.decision,risk_score:log.risk_score,risk_level:log.risk_level,confidence:log.confidence_score},null,2)}</div>
+      </div>
+      <div class="audit-time">${ts.toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   ROUTE MAP SECTION SYNC
+═══════════════════════════════════════════ */
+function syncRouteMapSection() {
+  // If a route has been drawn on the main map, show a note; map is on dashboard
+  const sub = document.getElementById('mapSubtitle2');
+  if (sub && window.originCity && window.destCity) {
+    sub.textContent = `${window.originCity.name} → ${window.destCity.name} — switch to Dashboard to interact`;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   FLEET FILTER (sidebar + fleet section)
+═══════════════════════════════════════════ */
+let _allFleetShipments = [];
+
+function filterFleet(status) {
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  // Highlight correct sidebar item
+  const map = {'all':0,'AT_RISK':1,'DELAYED':2,'ON_SCHEDULE':3,'IN_TRANSIT':-1};
+  const idx = map[status] ?? -1;
+  const items = document.querySelectorAll('.sb-item');
+  if (idx >= 0 && items[idx]) items[idx].classList.add('active');
+
+  if (!_allFleetShipments.length) return;
+  const filtered = status === 'all'
+    ? _allFleetShipments
+    : _allFleetShipments.filter(s => s.status === status);
+
+  const STATUS_STYLE = {ON_SCHEDULE:'var(--teal)',IN_TRANSIT:'var(--blue)',AT_RISK:'var(--amber)',DELAYED:'var(--red)'};
+  const TIER_STYLE = {LOW:'var(--teal2)',MEDIUM:'var(--amber)',HIGH:'var(--red)',CRITICAL:'var(--red)'};
+
+  const tbody = document.querySelector('#fleetTable tbody') || document.querySelector('#fleetTable table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = filtered.map(ship => {
+    const sc = STATUS_STYLE[ship.status]||'var(--text2)';
+    const tc = TIER_STYLE[ship.risk_tier]||'var(--text2)';
+    const pct = ship.progress_pct||0;
+    return `<tr>
+      <td style="font-family:var(--font-mono);color:var(--text)">${ship.shipment_id}</td>
+      <td>${ship.origin} → ${ship.destination}</td>
+      <td style="max-width:160px;font-size:12px">${ship.supplier_name}</td>
+      <td><span style="color:${sc};font-family:var(--font-mono);font-size:11px">● ${ship.status.replace('_',' ')}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:4px;background:var(--border2);border-radius:2px;min-width:60px">
+            <div style="width:${pct}%;height:4px;background:${sc};border-radius:2px;transition:width .4s"></div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text3)">${pct}%</span>
+        </div>
+      </td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--text2)">${ship.eta_days}d</td>
+      <td style="color:${tc};font-family:var(--font-mono);font-size:11px">${ship.risk_tier}</td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--text2)">${ship.priority}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:11px;padding:20px">No shipments match this filter</td></tr>`;
+}
+
+/* ═══════════════════════════════════════════
+   DASHBOARD LIVE TABLE — loaded from /fleet
+═══════════════════════════════════════════ */
+async function loadDashboardTable() {
+  try {
+    const res = await fetch(`${BACKEND}/fleet`);
+    if (!res.ok) return;
+    const data = await res.json();
+    _allFleetShipments = data.shipments || [];
+    const s = data.summary || {};
+
+    // Update sidebar badges with real counts
+    const badgeAll = document.getElementById('sbBadgeAll');
+    const badgeRisk = document.getElementById('sbBadgeRisk');
+    const badgeDelayed = document.getElementById('sbBadgeDelayed');
+    const badgeOk = document.getElementById('sbBadgeOk');
+    if (badgeAll) badgeAll.textContent = s.total || 0;
+    if (badgeRisk) badgeRisk.textContent = (s.at_risk || 0);
+    if (badgeDelayed) badgeDelayed.textContent = (s.delayed || 0);
+    if (badgeOk) badgeOk.textContent = (s.on_schedule || 0) + (s.in_transit || 0);
+
+    // Populate dashboard shipment rows
+    const tbody = document.getElementById('shipmentRows');
+    if (!tbody) return;
+    const STATUS_STYLE = {ON_SCHEDULE:'var(--teal)',IN_TRANSIT:'var(--blue)',AT_RISK:'var(--amber)',DELAYED:'var(--red)'};
+    tbody.innerHTML = _allFleetShipments.map(ship => {
+      const sc = STATUS_STYLE[ship.status]||'var(--text2)';
+      const rC = ship.risk_tier==='HIGH'||ship.risk_tier==='CRITICAL'?'h':ship.risk_tier==='MEDIUM'?'m':'l';
+      return `<tr onclick="quickRoute('${ship.origin}','${ship.destination}')">
+        <td><div class="sid">${ship.shipment_id}</div></td>
+        <td><div class="route-cell">${ship.origin}<span class="rarrow">→</span>${ship.destination}</div></td>
+        <td>${ship.priority}</td>
+        <td><span class="risk-pill ${rC}">${ship.risk_tier}</span></td>
+        <td style="font-family:var(--font-mono);font-size:11px">${Math.round(ship.distance_km).toLocaleString()} km</td>
+        <td><span style="color:${sc};font-family:var(--font-mono);font-size:10px">● ${ship.status.replace('_',' ')}</span></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    // silently fall back to static sample data already in the DOM
+  }
+}
+
+/* ═══════════════════════════════════════════
+   CACHE INVALIDATION after new analysis
+═══════════════════════════════════════════ */
+function invalidateSectionCaches() {
+  fleetLoaded = false;
+  analyticsLoaded = false;
+  auditHistoryLoaded = false;
+}
+
+// Load dashboard table on startup
+loadDashboardTable();
 
 // Default SLA = 14 days out
 const dl=new Date(); dl.setDate(dl.getDate()+14);
