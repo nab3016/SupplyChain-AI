@@ -81,3 +81,14 @@ supply-chain-ai-agent/
 | POST | `/api/v1/analyze/csv` | Bulk CSV analysis |
 | GET | `/api/v1/audit/logs` | Recent audit log entries |
 | GET | `/docs` | Swagger UI |
+
+
+
+## Git command
+git add .
+git commit -m "any change"
+git push
+git push origin main
+
+## Collabrator
+git push --set-upstream origin main
