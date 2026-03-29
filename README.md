@@ -294,7 +294,7 @@ All settings are loaded from `.env` via Pydantic's `BaseSettings`. No hardcoded 
 ## 🤝 Collaboration — Git Workflow
 
 ```bash
-# Initial setup
+# First push (set upstream)
 git add .
 git commit -m "feat: your change description"
 git push --set-upstream origin main
@@ -303,6 +303,15 @@ git push --set-upstream origin main
 git add .
 git commit -m "fix: your fix description"
 git push origin main
+
+# Quick push (any change)
+git add .
+git commit -m "update"
+git push
+
+
+
+
 ```
 
 ---
