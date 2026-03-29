@@ -721,9 +721,9 @@ select.field-ctrl{cursor:pointer}
       </div>
       <div class="map-panel" style="min-height:520px">
         <div style="padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px">
-          <button class="map-tab active" id="tabPrimary2" onclick="switchMapTab('primary')">Primary</button>
-          <button class="map-tab" id="tabReroute2" onclick="switchMapTab('reroute')">Reroute</button>
-          <button class="map-tab" id="tabBoth2" onclick="switchMapTab('both')">Both</button>
+          <button class="map-tab active" id="tabPrimary2" onclick="switchMapTab2('primary')">Primary</button>
+          <button class="map-tab" id="tabReroute2" onclick="switchMapTab2('reroute')">Reroute</button>
+          <button class="map-tab" id="tabBoth2" onclick="switchMapTab2('both')">Both</button>
           <span style="margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--text3)" id="mapSubtitle2">No route loaded — run analysis on Dashboard first</span>
         </div>
         <div id="routeMap2" style="flex:1;min-height:460px;background:var(--bg3)"></div>
@@ -1051,9 +1051,12 @@ window.geocodeCity = async function(name) {
    STATE
 ═══════════════════════════════════════════ */
 let originCity = null, destCity = null;
-let mapLayers = { primary: null, reroute: null, markers: [] };
+let mapLayers  = { primary: null, reroute: null, markers: [] };
+let mapLayers2 = { primary: null, reroute: null, markers: [] };
 let currentTab = 'both';
 let map;
+let map2;
+let map2Initialised = false;
 
 /* ═══════════════════════════════════════════
    LEAFLET MAP INIT
@@ -1156,6 +1159,17 @@ function switchMapTab(tab) {
   if (tab==='primary' && mapLayers.reroute) map.removeLayer(mapLayers.reroute);
 }
 
+function switchMapTab2(tab) {
+  currentTab = tab;
+  // Highlight correct tab in Route Map section
+  ['Primary','Reroute','Both'].forEach(t => {
+    const btn = document.getElementById('tab'+t+'2');
+    if (btn) btn.classList.toggle('active', t.toLowerCase() === tab);
+  });
+  if (!originCity || !destCity || !map2) return;
+  drawRoute2(originCity, destCity, window.lastDecision || 'PROCEED', tab);
+}
+
 /* ═══════════════════════════════════════════
    AUTOCOMPLETE
 ═══════════════════════════════════════════ */
@@ -1250,40 +1264,64 @@ function quickRoute(o, d) {
 }
 
 /* ═══════════════════════════════════════════
-   RISK CHART
+   RISK CHART — populated from /audit/logs
 ═══════════════════════════════════════════ */
 const chartLabels = Array.from({length:30},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-29+i); return d.toLocaleDateString('en',{month:'short',day:'numeric'}); });
-const rD=[38,42,45,40,55,62,58,44,38,42,47,52,60,74,68,50,44,38,46,52,48,42,50,58,64,70,62,52,46,42];
-const sD=[34,38,40,36,50,58,52,40,34,38,42,46,54,68,62,46,40,34,42,48,44,38,46,52,58,64,56,48,42,38];
-new Chart(document.getElementById('riskChart').getContext('2d'),{
-  type:'line',
-  data:{labels:chartLabels,datasets:[
-    {label:'Risk',    data:rD, borderColor:'#FF5470',backgroundColor:'rgba(255,84,112,0.06)',tension:.4,pointRadius:0,borderWidth:2,fill:true},
-    {label:'Resolved',data:sD, borderColor:'#00E5C3',backgroundColor:'rgba(0,229,195,0.06)', tension:.4,pointRadius:0,borderWidth:2,fill:true},
-  ]},
-  options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(13,16,23,.96)',borderColor:'rgba(255,255,255,.08)',borderWidth:1,titleFont:{family:'JetBrains Mono,monospace',size:11},bodyFont:{family:'JetBrains Mono,monospace',size:11},padding:12,cornerRadius:10}},scales:{x:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A',maxTicksLimit:6}},y:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A'},min:20,max:90,border:{color:'transparent'}}}},
-});
+// Initialise with empty arrays; loadRiskChart() fills from real audit data
+let riskChartInstance = null;
+function _buildRiskChart(rD, sD) {
+  const ctx = document.getElementById('riskChart');
+  if (!ctx) return;
+  if (riskChartInstance) riskChartInstance.destroy();
+  riskChartInstance = new Chart(ctx.getContext('2d'),{
+    type:'line',
+    data:{labels:chartLabels,datasets:[
+      {label:'Risk',    data:rD, borderColor:'#FF5470',backgroundColor:'rgba(255,84,112,0.06)',tension:.4,pointRadius:0,borderWidth:2,fill:true},
+      {label:'Resolved',data:sD, borderColor:'#00E5C3',backgroundColor:'rgba(0,229,195,0.06)', tension:.4,pointRadius:0,borderWidth:2,fill:true},
+    ]},
+    options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(13,16,23,.96)',borderColor:'rgba(255,255,255,.08)',borderWidth:1,titleFont:{family:'JetBrains Mono,monospace',size:11},bodyFont:{family:'JetBrains Mono,monospace',size:11},padding:12,cornerRadius:10}},scales:{x:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A',maxTicksLimit:6}},y:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A'},min:0,max:100,border:{color:'transparent'}}}},
+  });
+}
+
+async function loadRiskChart() {
+  try {
+    const res = await fetch(`${BACKEND}/audit/logs?limit=200`);
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    const logs = data.logs || [];
+
+    // Build a date → {sum, count, resolved} map for the past 30 days
+    const today = new Date();
+    const dayMap = {};
+    chartLabels.forEach(lbl => { dayMap[lbl] = {sum:0,cnt:0,res:0}; });
+
+    logs.forEach(log => {
+      try {
+        const d = new Date(log.timestamp);
+        const lbl = d.toLocaleDateString('en',{month:'short',day:'numeric'});
+        if (dayMap[lbl]) {
+          dayMap[lbl].sum += (log.risk_score||0);
+          dayMap[lbl].cnt++;
+          if (log.decision === 'PROCEED') dayMap[lbl].res++;
+        }
+      } catch(e) {}
+    });
+
+    const rD = chartLabels.map(lbl => dayMap[lbl].cnt ? Math.round(dayMap[lbl].sum/dayMap[lbl].cnt) : null);
+    const sD = chartLabels.map(lbl => dayMap[lbl].cnt ? Math.round((dayMap[lbl].res/dayMap[lbl].cnt)*100) : null);
+    _buildRiskChart(rD, sD);
+  } catch(e) {
+    // Build chart with empty data if backend unavailable
+    _buildRiskChart(Array(30).fill(null), Array(30).fill(null));
+  }
+}
 
 /* ═══════════════════════════════════════════
-   SAMPLE SHIPMENT TABLE
+   DASHBOARD SHIPMENT TABLE placeholder
+   (replaced immediately by loadDashboardTable)
 ═══════════════════════════════════════════ */
-const SAMPLE_SHIPS=[
-  {id:'SHP-1024',from:'Mumbai',      to:'Rotterdam',  cargo:'Electronics',   risk:'h',dist:11212,dec:'rr'},
-  {id:'SHP-1031',from:'Shanghai',    to:'Los Angeles', cargo:'Machinery',    risk:'m',dist:10918,dec:'ho'},
-  {id:'SHP-1038',from:'Jebel Ali',   to:'Hamburg',    cargo:'General Cargo', risk:'l',dist:7892,dec:'pr'},
-  {id:'SHP-1042',from:'Singapore',   to:'Felixstowe', cargo:'Pharmaceuticals',risk:'l',dist:10788,dec:'pr'},
-  {id:'SHP-1048',from:'Chennai',     to:'Dubai',      cargo:'Textiles',      risk:'m',dist:2754,dec:'ho'},
-];
-const decMap={rr:['REROUTE','rr'],pr:['PROCEED','pr'],ho:['HOLD','ho']};
-document.getElementById('shipmentRows').innerHTML=SAMPLE_SHIPS.map(s=>`
-  <tr onclick="quickRoute('${s.from}','${s.to}')">
-    <td><div class="sid">${s.id}</div></td>
-    <td><div class="route-cell">${s.from}<span class="rarrow">→</span>${s.to}</div></td>
-    <td>${s.cargo}</td>
-    <td><span class="risk-pill ${s.risk}">${s.risk==='h'?'HIGH':s.risk==='m'?'MED':'LOW'}</span></td>
-    <td style="font-family:var(--font-mono);font-size:11px">${s.dist.toLocaleString()} km</td>
-    <td><span class="dtag ${decMap[s.dec][1]}">${decMap[s.dec][0]}</span></td>
-  </tr>`).join('');
+document.getElementById('shipmentRows').innerHTML =
+  `<tr><td colspan="6" style="text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:11px;padding:20px">Loading shipments…</td></tr>`;
 
 /* ═══════════════════════════════════════════
    PIPELINE ANIMATION
@@ -1373,6 +1411,7 @@ async function runAnalysis() {
   document.getElementById('pipelineChip').textContent  = '● '+decision;
 
   // ── Map ───────────────────────────────────────────────────────────────────
+  window.lastDecision = decision;
   drawRoute(originCity, destCity, decision);
 
   // ── Result card ───────────────────────────────────────────────────────────
@@ -1845,12 +1884,93 @@ function renderAuditHistory(logs, total) {
 /* ═══════════════════════════════════════════
    ROUTE MAP SECTION SYNC
 ═══════════════════════════════════════════ */
-function syncRouteMapSection() {
-  // If a route has been drawn on the main map, show a note; map is on dashboard
-  const sub = document.getElementById('mapSubtitle2');
-  if (sub && window.originCity && window.destCity) {
-    sub.textContent = `${window.originCity.name} → ${window.destCity.name} — switch to Dashboard to interact`;
+function initMap2() {
+  if (map2Initialised) return;
+  map2 = L.map('routeMap2', { center: [20, 78], zoom: 3, zoomControl: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 18,
+  }).addTo(map2);
+  // Draw same faint idle background routes as dashboard map
+  const idleRoutes = [
+    { from:[18.9388,72.8354], to:[51.9244,4.4777],   color:'rgba(0,229,195,0.15)',  weight:1.5 },
+    { from:[31.2304,121.4737],to:[33.7406,-118.2706], color:'rgba(77,158,255,0.15)', weight:1.5 },
+    { from:[1.3521,103.8198], to:[51.9244,4.4777],    color:'rgba(167,139,250,0.12)',weight:1 },
+    { from:[18.9388,72.8354], to:[24.9958,55.0608],   color:'rgba(0,229,195,0.1)',   weight:1 },
+  ];
+  idleRoutes.forEach(r => {
+    L.polyline([r.from, r.to], { color:r.color, weight:r.weight, dashArray:'6 8' }).addTo(map2);
+  });
+  map2Initialised = true;
+}
+
+function clearMapLayers2() {
+  if (!map2) return;
+  if (mapLayers2.primary) { map2.removeLayer(mapLayers2.primary); mapLayers2.primary = null; }
+  if (mapLayers2.reroute) { map2.removeLayer(mapLayers2.reroute); mapLayers2.reroute = null; }
+  mapLayers2.markers.forEach(m => { try { map2.removeLayer(m); } catch(e) {} });
+  mapLayers2.markers = [];
+}
+
+function drawRoute2(originC, destC, decision, tab) {
+  if (!map2 || !originC || !destC) return;
+  clearMapLayers2();
+  const from = [originC.lat, originC.lng];
+  const to   = [destC.lat,   destC.lng];
+  const activeTab = tab || currentTab;
+
+  mapLayers2.primary = L.polyline(greatCirclePoints(from, to, 80), {
+    color:'#00E5C3', weight:2.5, opacity:.85,
+    dashArray: decision === 'REROUTE' ? '8 6' : null,
+  }).addTo(map2);
+
+  const midLat = (from[0]+to[0])/2, midLng = (from[1]+to[1])/2;
+  const waypoint = [midLat+(to[0]-from[0])*0.15, midLng-(to[1]-from[1])*0.2];
+  const reroutePts = [...greatCirclePoints(from, waypoint, 40), ...greatCirclePoints(waypoint, to, 40)];
+  mapLayers2.reroute = L.polyline(reroutePts, { color:'#FFB547', weight:2.5, opacity:.85, dashArray:'6 5' });
+
+  const wayptMarker = L.marker(waypoint, {icon: makeIcon('rgba(255,181,71,0.2)', '⚓')})
+    .bindPopup('<b>Reroute Waypoint</b><br>Alternate corridor<br><span style="color:#FFB547;font-size:11px">▲ +18% distance · safer passage</span>');
+  mapLayers2.markers.push(wayptMarker);
+
+  const mFrom = L.marker(from, {icon: makeIcon('rgba(0,229,195,0.25)', '🟢')})
+    .bindPopup(`<b>${originC.name}</b><br>${originC.region}, ${originC.country}`);
+  const mTo = L.marker(to, {icon: makeIcon('rgba(255,84,112,0.25)', '🔴')})
+    .bindPopup(`<b>${destC.name}</b><br>${destC.region}, ${destC.country}`);
+  mFrom.addTo(map2); mTo.addTo(map2);
+  mapLayers2.markers.push(mFrom, mTo);
+
+  // Apply tab visibility
+  if (activeTab === 'reroute' || activeTab === 'both') {
+    mapLayers2.reroute.addTo(map2);
+    wayptMarker.addTo(map2);
   }
+  if (activeTab === 'primary') {
+    // reroute line already not added
+  }
+
+  map2.fitBounds(L.featureGroup([mFrom, mTo]).getBounds().pad(0.3));
+}
+
+function syncRouteMapSection() {
+  initMap2();
+  // Force Leaflet to recalculate size after the section becomes visible
+  setTimeout(() => { if (map2) map2.invalidateSize(); }, 50);
+
+  const sub = document.getElementById('mapSubtitle2');
+  if (!window.originCity || !window.destCity) {
+    if (sub) sub.textContent = 'No route loaded — run an analysis on Dashboard first';
+    return;
+  }
+  if (sub) sub.textContent = `${window.originCity.name} → ${window.destCity.name}`;
+
+  // Determine last decision from stored state
+  drawRoute2(window.originCity, window.destCity, window.lastDecision || 'PROCEED', currentTab);
+
+  // Sync tab buttons in Route Map section
+  ['Primary','Reroute','Both'].forEach(t => {
+    const btn = document.getElementById('tab'+t+'2');
+    if (btn) btn.classList.toggle('active', currentTab === t.toLowerCase());
+  });
 }
 
 /* ═══════════════════════════════════════════
@@ -1938,7 +2058,9 @@ async function loadDashboardTable() {
       </tr>`;
     }).join('');
   } catch(e) {
-    // silently fall back to static sample data already in the DOM
+    const tbody = document.getElementById('shipmentRows');
+    if (tbody) tbody.innerHTML =
+      `<tr><td colspan="6" style="text-align:center;color:var(--red);font-family:var(--font-mono);font-size:11px;padding:20px">⚠ Could not load fleet data — backend offline? (${e.message})</td></tr>`;
   }
 }
 
@@ -1951,8 +2073,9 @@ function invalidateSectionCaches() {
   auditHistoryLoaded = false;
 }
 
-// Load dashboard table on startup
+// Load dashboard table and risk chart on startup
 loadDashboardTable();
+loadRiskChart();
 
 // Default SLA = 14 days out
 const dl=new Date(); dl.setDate(dl.getDate()+14);
