@@ -1,0 +1,11 @@
+shipment_id,origin,destination,supplier_name,distance_km,shipment_value,delivery_deadline,priority
+SHP-0001,Mumbai,Delhi,Apex Logistics Ltd.,1420,2500000,2026-10-15,HIGH
+SHP-0002,Chennai,Delhi,Bharat Freight Services,2180,1800000,2026-10-20,STANDARD
+SHP-0003,Kolkata,Mumbai,National Transport Corp,2050,3200000,2026-10-12,CRITICAL
+SHP-0004,Bangalore,Mumbai,Express India Logistics,980,950000,2026-10-25,STANDARD
+SHP-0005,Hyderabad,Delhi,Reliance Supply Chain,1490,4500000,2026-10-18,HIGH
+SHP-0006,Pune,Chennai,Shree Transport Solutions,1150,720000,2026-10-30,STANDARD
+SHP-0007,Ahmedabad,Delhi,Hindustan Cargo Ltd.,940,1100000,2026-10-10,HIGH
+SHP-0008,Jaipur,Mumbai,Blue Dart Logistics,1200,680000,2026-11-05,STANDARD
+SHP-0009,Lucknow,Chennai,GATI Courier Services,1750,2200000,2026-10-22,STANDARD
+SHP-0010,Delhi,Bangalore,Safexpress Pvt Ltd,2100,3800000,2026-10-28,HIGH

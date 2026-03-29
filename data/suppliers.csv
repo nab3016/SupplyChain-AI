@@ -1,0 +1,16 @@
+supplier_name,reliability_score,avg_delay_days,on_time_rate,risk_tier,incidents_last_12m
+Apex Logistics Ltd.,0.61,4.2,0.61,HIGH,9
+Bharat Freight Services,0.82,1.8,0.82,LOW,2
+Reliance Supply Chain,0.74,2.5,0.74,MEDIUM,4
+National Transport Corp,0.55,5.1,0.55,HIGH,12
+Express India Logistics,0.90,0.9,0.90,LOW,1
+Shree Transport Solutions,0.68,3.3,0.68,MEDIUM,6
+Hindustan Cargo Ltd.,0.48,6.0,0.48,CRITICAL,15
+Blue Dart Logistics,0.91,0.7,0.91,LOW,1
+GATI Courier Services,0.78,2.1,0.78,MEDIUM,3
+Safexpress Pvt Ltd,0.85,1.4,0.85,LOW,2
+Om Logistics,0.62,4.0,0.62,HIGH,8
+TCI Freight,0.77,2.3,0.77,MEDIUM,4
+Delhivery Supply Chain,0.88,1.1,0.88,LOW,1
+VRL Logistics,0.71,2.9,0.71,MEDIUM,5
+Patel Roadways,0.59,4.7,0.59,HIGH,10

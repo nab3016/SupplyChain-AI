@@ -1,0 +1,16 @@
+route_id,route_name,origin,destination,distance_km,estimated_time_hours,freight_cost,highway,toll_gates,risk_score
+RT-001,Mumbai → Delhi via NH-48 (Primary),Mumbai,Delhi,1420,52,42600,NH-48,12,65.0
+RT-002,Mumbai → Delhi via NH-44 Bypass,Mumbai,Delhi,1535,47,46050,NH-44,15,28.0
+RT-003,Mumbai → Delhi via Express Rail Freight,Mumbai,Delhi,1380,36,55200,RAIL,0,20.0
+RT-004,Chennai → Delhi via NH-44 (Primary),Chennai,Delhi,2180,72,65400,NH-44,18,70.0
+RT-005,Chennai → Delhi via NH-48 Bypass,Chennai,Delhi,2310,68,69300,NH-48,20,35.0
+RT-006,Kolkata → Mumbai via NH-16 (Primary),Kolkata,Mumbai,2050,65,61500,NH-16,16,72.0
+RT-007,Kolkata → Mumbai via NH-6 Alternate,Kolkata,Mumbai,2200,60,66000,NH-6,18,30.0
+RT-008,Bangalore → Mumbai via NH-48 (Primary),Bangalore,Mumbai,980,34,29400,NH-48,10,55.0
+RT-009,Bangalore → Mumbai via NH-4 Coastal,Bangalore,Mumbai,1060,32,31800,NH-4,12,22.0
+RT-010,Hyderabad → Delhi via NH-44 (Primary),Hyderabad,Delhi,1490,50,44700,NH-44,14,60.0
+RT-011,Hyderabad → Delhi via NH-65 Express,Hyderabad,Delhi,1580,46,47400,NH-65,16,25.0
+RT-012,Pune → Chennai via NH-65 (Primary),Pune,Chennai,1150,40,34500,NH-65,11,58.0
+RT-013,Pune → Chennai via NH-48 Inland,Pune,Chennai,1240,37,37200,NH-48,13,24.0
+RT-014,Ahmedabad → Delhi via NH-48 (Primary),Ahmedabad,Delhi,940,30,28200,NH-48,9,52.0
+RT-015,Ahmedabad → Delhi via NH-8 Express,Ahmedabad,Delhi,1020,28,30600,NH-8,11,20.0
