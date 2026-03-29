@@ -569,7 +569,7 @@ select.field-ctrl{cursor:pointer}
             <div class="cl-item"><div class="cl-dot" style="background:var(--teal)"></div>Resolved</div>
           </div>
         </div>
-        <div style="padding:16px 22px 10px"><canvas id="riskChart" height="200"></canvas></div>
+        <div style="padding:16px 22px 10px;min-height:260px;position:relative"><canvas id="riskChart" style="display:block"></canvas></div>
         <div style="padding:0 20px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
           <div style="text-align:center;padding:12px 6px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)"><div style="font-family:var(--font-head);font-size:22px;color:var(--red)">12</div><div style="font-size:9px;color:var(--text3);font-family:var(--font-mono);letter-spacing:.5px;margin-top:2px">PEAK DISRUPT.</div></div>
           <div style="text-align:center;padding:12px 6px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)"><div style="font-family:var(--font-head);font-size:22px;color:var(--teal)">94%</div><div style="font-size:9px;color:var(--text3);font-family:var(--font-mono);letter-spacing:.5px;margin-top:2px">AUTO-RESOLVED</div></div>
@@ -1279,39 +1279,63 @@ function _buildRiskChart(rD, sD) {
       {label:'Risk',    data:rD, borderColor:'#FF5470',backgroundColor:'rgba(255,84,112,0.06)',tension:.4,pointRadius:0,borderWidth:2,fill:true},
       {label:'Resolved',data:sD, borderColor:'#00E5C3',backgroundColor:'rgba(0,229,195,0.06)', tension:.4,pointRadius:0,borderWidth:2,fill:true},
     ]},
-    options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(13,16,23,.96)',borderColor:'rgba(255,255,255,.08)',borderWidth:1,titleFont:{family:'JetBrains Mono,monospace',size:11},bodyFont:{family:'JetBrains Mono,monospace',size:11},padding:12,cornerRadius:10}},scales:{x:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A',maxTicksLimit:6}},y:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A'},min:0,max:100,border:{color:'transparent'}}}},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(13,16,23,.96)',borderColor:'rgba(255,255,255,.08)',borderWidth:1,titleFont:{family:'JetBrains Mono,monospace',size:11},bodyFont:{family:'JetBrains Mono,monospace',size:11},padding:12,cornerRadius:10}},scales:{x:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A',maxTicksLimit:6}},y:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A'},min:0,max:100,border:{color:'transparent'}}}},
   });
 }
 
 async function loadRiskChart() {
   try {
-    const res = await fetch(`${BACKEND}/audit/logs?limit=200`);
-    if (!res.ok) throw new Error(res.status);
-    const data = await res.json();
-    const logs = data.logs || [];
+    // Fetch audit logs and analytics overview in parallel for richer data
+    const [logsRes, overviewRes] = await Promise.all([
+      fetch(`${BACKEND}/audit/logs?limit=500`),
+      fetch(`${BACKEND}/analytics/overview`)
+    ]);
 
-    // Build a date → {sum, count, resolved} map for the past 30 days
-    const today = new Date();
+    const logsData     = logsRes.ok     ? await logsRes.json()     : { logs: [] };
+    const overviewData = overviewRes.ok ? await overviewRes.json() : null;
+
+    const logs = logsData.logs || [];
+
+    // Pull overall avg risk from analytics overview as the baseline fill value
+    const overallAvgRisk     = overviewData?.pipeline?.avg_risk_score ?? null;
+    const decisions          = overviewData?.pipeline?.decisions ?? {};
+    const totalDecisions     = Object.values(decisions).reduce((a,b)=>a+b,0);
+    const proceedCount       = decisions['PROCEED'] ?? 0;
+    const overallResolvedPct = totalDecisions > 0
+      ? Math.round((proceedCount / totalDecisions) * 100)
+      : null;
+
+    // Build a date -> {sum, count, resolved} map for the past 30 days
     const dayMap = {};
-    chartLabels.forEach(lbl => { dayMap[lbl] = {sum:0,cnt:0,res:0}; });
+    chartLabels.forEach(lbl => { dayMap[lbl] = { sum:0, cnt:0, res:0 }; });
 
     logs.forEach(log => {
       try {
         const d = new Date(log.timestamp);
-        const lbl = d.toLocaleDateString('en',{month:'short',day:'numeric'});
+        const lbl = d.toLocaleDateString('en', { month:'short', day:'numeric' });
         if (dayMap[lbl]) {
-          dayMap[lbl].sum += (log.risk_score||0);
+          dayMap[lbl].sum += (log.risk_score || 0);
           dayMap[lbl].cnt++;
           if (log.decision === 'PROCEED') dayMap[lbl].res++;
         }
       } catch(e) {}
     });
 
-    const rD = chartLabels.map(lbl => dayMap[lbl].cnt ? Math.round(dayMap[lbl].sum/dayMap[lbl].cnt) : null);
-    const sD = chartLabels.map(lbl => dayMap[lbl].cnt ? Math.round((dayMap[lbl].res/dayMap[lbl].cnt)*100) : null);
+    // Days with real log entries use computed avg.
+    // Days with no entries fill from the overall analytics avg so the chart
+    // always renders a visible baseline instead of blank gaps.
+    const rD = chartLabels.map(lbl => {
+      if (dayMap[lbl].cnt) return Math.round(dayMap[lbl].sum / dayMap[lbl].cnt);
+      return overallAvgRisk !== null ? Math.round(overallAvgRisk) : null;
+    });
+    const sD = chartLabels.map(lbl => {
+      if (dayMap[lbl].cnt) return Math.round((dayMap[lbl].res / dayMap[lbl].cnt) * 100);
+      return overallResolvedPct !== null ? overallResolvedPct : null;
+    });
+
     _buildRiskChart(rD, sD);
   } catch(e) {
-    // Build chart with empty data if backend unavailable
+    console.error('loadRiskChart error:', e);
     _buildRiskChart(Array(30).fill(null), Array(30).fill(null));
   }
 }
