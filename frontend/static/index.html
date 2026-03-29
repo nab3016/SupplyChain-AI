@@ -33,7 +33,7 @@ html{font-size:16px;scroll-behavior:smooth}
 body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.014) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.014) 1px,transparent 1px);background-size:52px 52px;pointer-events:none;z-index:0}
 body::after{content:'';position:fixed;top:-220px;left:50%;transform:translateX(-50%);width:1100px;height:560px;background:radial-gradient(ellipse,rgba(0,229,195,0.048) 0%,transparent 68%);pointer-events:none;z-index:0}
-*{position:relative;z-index:1}
+*{position:relative}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:3px}
  
 /* ── KEYFRAMES ── */
@@ -148,9 +148,10 @@ body::after{content:'';position:fixed;top:-220px;left:50%;transform:translateX(-
 select.field-ctrl{cursor:pointer}
  
 /* AUTOCOMPLETE */
-.ac-wrap{position:relative}
+.ac-wrap{position:relative;z-index:1000}
+.ac-wrap:focus-within{z-index:2000}
 .ac-ico{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none}
-.ac-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;overflow:hidden;z-index:300;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:slidedown .12s ease both;display:none}
+.ac-dropdown{position:fixed;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;overflow:hidden;z-index:9999;box-shadow:0 12px 40px rgba(0,0,0,.7);animation:slidedown .12s ease both;display:none;min-width:260px}
 .ac-dropdown.open{display:block}
 .ac-item{padding:10px 14px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--border)}
 .ac-item:last-child{border-bottom:none}
@@ -357,10 +358,10 @@ select.field-ctrl{cursor:pointer}
   <aside class="sidebar">
     <div>
       <div class="sb-section-label">Active Shipments</div>
-      <div class="sb-item active" onclick="showSection('fleet');filterFleet('all')"><div class="sb-icon">🚢</div>All Shipments<span class="sb-badge ok" id="sbBadgeAll">142</span></div>
-      <div class="sb-item" onclick="showSection('fleet');filterFleet('AT_RISK')"><div class="sb-icon">⚠️</div>At Risk<span class="sb-badge err" id="sbBadgeRisk">7</span></div>
-      <div class="sb-item" onclick="showSection('fleet');filterFleet('DELAYED')"><div class="sb-icon">🔄</div>Rerouted<span class="sb-badge warn" id="sbBadgeDelayed">4</span></div>
-      <div class="sb-item" onclick="showSection('fleet');filterFleet('ON_SCHEDULE')"><div class="sb-icon">✅</div>On Schedule<span class="sb-badge ok" id="sbBadgeOk">131</span></div>
+      <div class="sb-item active" onclick="filterFleet('all');showSection('fleet')"><div class="sb-icon">🚢</div>All Shipments<span class="sb-badge ok" id="sbBadgeAll">0</span></div>
+      <div class="sb-item" onclick="filterFleet('AT_RISK');showSection('fleet')"><div class="sb-icon">⚠️</div>At Risk<span class="sb-badge err" id="sbBadgeRisk">0</span></div>
+      <div class="sb-item" onclick="filterFleet('DELAYED');showSection('fleet')"><div class="sb-icon">🔄</div>Rerouted<span class="sb-badge warn" id="sbBadgeDelayed">0</span></div>
+      <div class="sb-item" onclick="filterFleet('ON_SCHEDULE');showSection('fleet')"><div class="sb-icon">✅</div>On Schedule<span class="sb-badge ok" id="sbBadgeOk">0</span></div>
     </div>
     <div>
       <div class="sb-section-label">Agent Health</div>
@@ -411,10 +412,10 @@ select.field-ctrl{cursor:pointer}
  
     <!-- METRIC STRIP -->
     <div class="metric-strip">
-      <div class="mc"><div class="mc-accent red"></div><div class="mc-glow red"></div><div class="mc-ico red">⚠️</div><div class="mc-lbl">High Risk</div><div class="mc-val">7</div><div class="mc-delta neg">↑ 2 since yesterday</div></div>
-      <div class="mc"><div class="mc-accent amber"></div><div class="mc-glow amber"></div><div class="mc-ico amber">🔄</div><div class="mc-lbl">Rerouted</div><div class="mc-val">4</div><div class="mc-delta mid">$72.4K cost avoidance</div></div>
-      <div class="mc"><div class="mc-accent teal"></div><div class="mc-glow teal"></div><div class="mc-ico teal">✅</div><div class="mc-lbl">SLA Compliance</div><div class="mc-val">98%</div><div class="mc-delta pos">↑ 1.2% vs last week</div></div>
-      <div class="mc"><div class="mc-accent blue"></div><div class="mc-glow blue"></div><div class="mc-ico blue">🌐</div><div class="mc-lbl">Routes Mapped</div><div class="mc-val">142</div><div class="mc-delta pos">Across 38 countries</div></div>
+      <div class="mc"><div class="mc-accent red"></div><div class="mc-glow red"></div><div class="mc-ico red">⚠️</div><div class="mc-lbl">High Risk</div><div class="mc-val" id="mcHighRisk">—</div><div class="mc-delta neg" id="mcHighRiskDelta">Loading…</div></div>
+      <div class="mc"><div class="mc-accent amber"></div><div class="mc-glow amber"></div><div class="mc-ico amber">🔄</div><div class="mc-lbl">Rerouted</div><div class="mc-val" id="mcRerouted">—</div><div class="mc-delta mid" id="mcReroutedDelta">Loading…</div></div>
+      <div class="mc"><div class="mc-accent teal"></div><div class="mc-glow teal"></div><div class="mc-ico teal">✅</div><div class="mc-lbl">SLA Compliance</div><div class="mc-val" id="mcSLA">—</div><div class="mc-delta pos" id="mcSLADelta">Loading…</div></div>
+      <div class="mc"><div class="mc-accent blue"></div><div class="mc-glow blue"></div><div class="mc-ico blue">🌐</div><div class="mc-lbl">Routes Mapped</div><div class="mc-val" id="mcRoutes">—</div><div class="mc-delta pos" id="mcRoutesDelta">Loading…</div></div>
     </div>
  
     <!-- ── ANALYSIS + MAP ── -->
@@ -569,7 +570,7 @@ select.field-ctrl{cursor:pointer}
             <div class="cl-item"><div class="cl-dot" style="background:var(--teal)"></div>Resolved</div>
           </div>
         </div>
-        <div style="padding:16px 22px 10px;min-height:260px;position:relative"><canvas id="riskChart" style="display:block"></canvas></div>
+        <div style="padding:16px 22px 10px"><canvas id="riskChart" height="200"></canvas></div>
         <div style="padding:0 20px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
           <div style="text-align:center;padding:12px 6px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)"><div style="font-family:var(--font-head);font-size:22px;color:var(--red)">12</div><div style="font-size:9px;color:var(--text3);font-family:var(--font-mono);letter-spacing:.5px;margin-top:2px">PEAK DISRUPT.</div></div>
           <div style="text-align:center;padding:12px 6px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)"><div style="font-family:var(--font-head);font-size:22px;color:var(--teal)">94%</div><div style="font-size:9px;color:var(--text3);font-family:var(--font-mono);letter-spacing:.5px;margin-top:2px">AUTO-RESOLVED</div></div>
@@ -1176,9 +1177,10 @@ function switchMapTab2(tab) {
 let acState = { origin:{idx:-1}, dest:{idx:-1} };
 
 function acSearch(which, query) {
-  const dropId = which==='origin' ? 'originDrop' : 'destDrop';
-  const normWhich = which==='dest' ? 'dest' : 'origin';
-  const drop   = document.getElementById(dropId);
+  const dropId   = which==='origin' ? 'originDrop' : 'destDrop';
+  const inputId  = which==='origin' ? 'originInput' : 'destInput';
+  const drop     = document.getElementById(dropId);
+  const input    = document.getElementById(inputId);
   acState[which].idx = -1;
   if (query.length < 2) { drop.classList.remove('open'); return; }
   const results = window.findCity(query);
@@ -1189,6 +1191,13 @@ function acSearch(which, query) {
       <div class="ac-meta"><span>${c.region}, ${c.country}</span><span class="ac-type-badge ${c.type}">${c.type}</span></div>
     </div>`).join('');
   drop._results = results;
+
+  // Position dropdown using fixed coords so it escapes overflow:hidden parents
+  const rect = input.getBoundingClientRect();
+  drop.style.top    = (rect.bottom + 6) + 'px';
+  drop.style.left   = rect.left + 'px';
+  drop.style.width  = rect.width + 'px';
+
   drop.classList.add('open');
 }
 
@@ -1219,6 +1228,23 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.ac-wrap'))
     document.querySelectorAll('.ac-dropdown').forEach(d=>d.classList.remove('open'));
 });
+
+// Keep fixed dropdowns aligned on scroll / resize
+function _repositionOpenDrops() {
+  ['origin','dest'].forEach(which => {
+    const dropId  = which==='origin' ? 'originDrop' : 'destDrop';
+    const inputId = which==='origin' ? 'originInput' : 'destInput';
+    const drop  = document.getElementById(dropId);
+    const input = document.getElementById(inputId);
+    if (!drop || !drop.classList.contains('open')) return;
+    const rect = input.getBoundingClientRect();
+    drop.style.top   = (rect.bottom + 6) + 'px';
+    drop.style.left  = rect.left + 'px';
+    drop.style.width = rect.width + 'px';
+  });
+}
+window.addEventListener('scroll', _repositionOpenDrops, true);
+window.addEventListener('resize', _repositionOpenDrops);
 
 /* ═══════════════════════════════════════════
    DISTANCE — AUTO-FILL ON CITY SELECT
@@ -1279,63 +1305,39 @@ function _buildRiskChart(rD, sD) {
       {label:'Risk',    data:rD, borderColor:'#FF5470',backgroundColor:'rgba(255,84,112,0.06)',tension:.4,pointRadius:0,borderWidth:2,fill:true},
       {label:'Resolved',data:sD, borderColor:'#00E5C3',backgroundColor:'rgba(0,229,195,0.06)', tension:.4,pointRadius:0,borderWidth:2,fill:true},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(13,16,23,.96)',borderColor:'rgba(255,255,255,.08)',borderWidth:1,titleFont:{family:'JetBrains Mono,monospace',size:11},bodyFont:{family:'JetBrains Mono,monospace',size:11},padding:12,cornerRadius:10}},scales:{x:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A',maxTicksLimit:6}},y:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A'},min:0,max:100,border:{color:'transparent'}}}},
+    options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(13,16,23,.96)',borderColor:'rgba(255,255,255,.08)',borderWidth:1,titleFont:{family:'JetBrains Mono,monospace',size:11},bodyFont:{family:'JetBrains Mono,monospace',size:11},padding:12,cornerRadius:10}},scales:{x:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A',maxTicksLimit:6}},y:{grid:{color:'rgba(255,255,255,.022)'},ticks:{font:{family:'JetBrains Mono,monospace',size:10},color:'#4A506A'},min:0,max:100,border:{color:'transparent'}}}},
   });
 }
 
 async function loadRiskChart() {
   try {
-    // Fetch audit logs and analytics overview in parallel for richer data
-    const [logsRes, overviewRes] = await Promise.all([
-      fetch(`${BACKEND}/audit/logs?limit=500`),
-      fetch(`${BACKEND}/analytics/overview`)
-    ]);
+    const res = await fetch(`${BACKEND}/audit/logs?limit=200`);
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    const logs = data.logs || [];
 
-    const logsData     = logsRes.ok     ? await logsRes.json()     : { logs: [] };
-    const overviewData = overviewRes.ok ? await overviewRes.json() : null;
-
-    const logs = logsData.logs || [];
-
-    // Pull overall avg risk from analytics overview as the baseline fill value
-    const overallAvgRisk     = overviewData?.pipeline?.avg_risk_score ?? null;
-    const decisions          = overviewData?.pipeline?.decisions ?? {};
-    const totalDecisions     = Object.values(decisions).reduce((a,b)=>a+b,0);
-    const proceedCount       = decisions['PROCEED'] ?? 0;
-    const overallResolvedPct = totalDecisions > 0
-      ? Math.round((proceedCount / totalDecisions) * 100)
-      : null;
-
-    // Build a date -> {sum, count, resolved} map for the past 30 days
+    // Build a date → {sum, count, resolved} map for the past 30 days
+    const today = new Date();
     const dayMap = {};
-    chartLabels.forEach(lbl => { dayMap[lbl] = { sum:0, cnt:0, res:0 }; });
+    chartLabels.forEach(lbl => { dayMap[lbl] = {sum:0,cnt:0,res:0}; });
 
     logs.forEach(log => {
       try {
         const d = new Date(log.timestamp);
-        const lbl = d.toLocaleDateString('en', { month:'short', day:'numeric' });
+        const lbl = d.toLocaleDateString('en',{month:'short',day:'numeric'});
         if (dayMap[lbl]) {
-          dayMap[lbl].sum += (log.risk_score || 0);
+          dayMap[lbl].sum += (log.risk_score||0);
           dayMap[lbl].cnt++;
           if (log.decision === 'PROCEED') dayMap[lbl].res++;
         }
       } catch(e) {}
     });
 
-    // Days with real log entries use computed avg.
-    // Days with no entries fill from the overall analytics avg so the chart
-    // always renders a visible baseline instead of blank gaps.
-    const rD = chartLabels.map(lbl => {
-      if (dayMap[lbl].cnt) return Math.round(dayMap[lbl].sum / dayMap[lbl].cnt);
-      return overallAvgRisk !== null ? Math.round(overallAvgRisk) : null;
-    });
-    const sD = chartLabels.map(lbl => {
-      if (dayMap[lbl].cnt) return Math.round((dayMap[lbl].res / dayMap[lbl].cnt) * 100);
-      return overallResolvedPct !== null ? overallResolvedPct : null;
-    });
-
+    const rD = chartLabels.map(lbl => dayMap[lbl].cnt ? Math.round(dayMap[lbl].sum/dayMap[lbl].cnt) : null);
+    const sD = chartLabels.map(lbl => dayMap[lbl].cnt ? Math.round((dayMap[lbl].res/dayMap[lbl].cnt)*100) : null);
     _buildRiskChart(rD, sD);
   } catch(e) {
-    console.error('loadRiskChart error:', e);
+    // Build chart with empty data if backend unavailable
     _buildRiskChart(Array(30).fill(null), Array(30).fill(null));
   }
 }
@@ -1473,6 +1475,8 @@ async function runAnalysis() {
   btn.textContent='▶  RUN 7-AGENT ANALYSIS';
   // Invalidate cached section data so next visit fetches fresh results
   invalidateSectionCaches();
+  loadDashboardMetrics();
+  loadRiskChart();
 }
 
 /* ═══════════════════════════════════════════
@@ -1528,7 +1532,7 @@ function showSection(name) {
     b.classList.toggle('active', b.dataset.section === name);
   });
   if (name === 'audit')     loadAuditHistory();
-  if (name === 'fleet')     loadFleet();
+  if (name === 'fleet')     loadFleet();   // _pendingFleetFilter already set by sidebar onclick or defaults to 'all'
   if (name === 'analytics') loadAnalytics();
   if (name === 'routemap')  syncRouteMapSection();
 }
@@ -1539,12 +1543,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
   });
 });
 
-document.querySelectorAll('.sb-item').forEach(item => {
-  item.addEventListener('click', function() {
-    document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
-    this.classList.add('active');
-  });
-});
+/* sb-item active state is managed by filterFleet() — no extra listener needed */
 
 /* ═══════════════════════════════════════════
    EXPORT REPORT
@@ -1671,8 +1670,14 @@ function renderCsvResults(results) {
    FLEET MONITOR
 ═══════════════════════════════════════════ */
 let fleetLoaded = false;
+let _pendingFleetFilter = 'all';   // remember which filter to apply after load
+
 async function loadFleet() {
-  if (fleetLoaded) return;
+  if (fleetLoaded) {
+    // Already loaded — just re-apply the current filter
+    filterFleet(_pendingFleetFilter);
+    return;
+  }
   try {
     const res = await fetch(`${BACKEND}/fleet`);
     if (!res.ok) throw new Error(res.status);
@@ -1680,6 +1685,8 @@ async function loadFleet() {
     fleetLoaded = true;
     _allFleetShipments = data.shipments || [];
     renderFleet(data);
+    // Apply filter AFTER render so the tbody exists
+    filterFleet(_pendingFleetFilter);
   } catch(e) {
     document.getElementById('fleetTable').innerHTML =
       `<div style="padding:40px;text-align:center;color:var(--red);font-family:var(--font-mono);font-size:12px">Failed to load fleet data: ${e.message}</div>`;
@@ -2003,14 +2010,18 @@ function syncRouteMapSection() {
 let _allFleetShipments = [];
 
 function filterFleet(status) {
+  _pendingFleetFilter = status;  // remember for post-load apply
+
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   // Highlight correct sidebar item
-  const map = {'all':0,'AT_RISK':1,'DELAYED':2,'ON_SCHEDULE':3,'IN_TRANSIT':-1};
-  const idx = map[status] ?? -1;
+  const statusMap = {'all':0,'AT_RISK':1,'DELAYED':2,'ON_SCHEDULE':3,'IN_TRANSIT':-1};
+  const idx = statusMap[status] ?? -1;
   const items = document.querySelectorAll('.sb-item');
   if (idx >= 0 && items[idx]) items[idx].classList.add('active');
 
+  // If fleet data not yet loaded, bail — loadFleet will call filterFleet again after fetch
   if (!_allFleetShipments.length) return;
+
   const filtered = status === 'all'
     ? _allFleetShipments
     : _allFleetShipments.filter(s => s.status === status);
@@ -2018,7 +2029,7 @@ function filterFleet(status) {
   const STATUS_STYLE = {ON_SCHEDULE:'var(--teal)',IN_TRANSIT:'var(--blue)',AT_RISK:'var(--amber)',DELAYED:'var(--red)'};
   const TIER_STYLE = {LOW:'var(--teal2)',MEDIUM:'var(--amber)',HIGH:'var(--red)',CRITICAL:'var(--red)'};
 
-  const tbody = document.querySelector('#fleetTable tbody') || document.querySelector('#fleetTable table tbody');
+  const tbody = document.querySelector('#fleetTable tbody');
   if (!tbody) return;
   tbody.innerHTML = filtered.map(ship => {
     const sc = STATUS_STYLE[ship.status]||'var(--text2)';
@@ -2095,11 +2106,62 @@ function invalidateSectionCaches() {
   fleetLoaded = false;
   analyticsLoaded = false;
   auditHistoryLoaded = false;
+  _pendingFleetFilter = 'all';
 }
 
 // Load dashboard table and risk chart on startup
 loadDashboardTable();
 loadRiskChart();
+loadDashboardMetrics();
+
+async function loadDashboardMetrics() {
+  try {
+    const [fleetRes, analyticsRes] = await Promise.all([
+      fetch(`${BACKEND}/fleet`),
+      fetch(`${BACKEND}/analytics/overview`),
+    ]);
+    const fleet     = fleetRes.ok     ? await fleetRes.json()     : {};
+    const analytics = analyticsRes.ok ? await analyticsRes.json() : {};
+
+    const summary  = fleet.summary || {};
+    const pipeline = analytics.pipeline || {};
+    const routes   = analytics.routes   || {};
+    const suppliers = analytics.suppliers || {};
+
+    // High Risk shipments
+    const highRisk = summary.at_risk || 0;
+    const el = document.getElementById('mcHighRisk');
+    if (el) el.textContent = highRisk;
+    const d1 = document.getElementById('mcHighRiskDelta');
+    if (d1) d1.textContent = `${summary.delayed||0} delayed · ${summary.in_transit||0} in transit`;
+
+    // Rerouted (REROUTE decisions from pipeline)
+    const decisions  = pipeline.decisions || {};
+    const reroutedCt = decisions['REROUTE'] || 0;
+    const totalRuns  = pipeline.total_analyzed || 0;
+    const el2 = document.getElementById('mcRerouted');
+    if (el2) el2.textContent = reroutedCt;
+    const d2 = document.getElementById('mcReroutedDelta');
+    if (d2) d2.textContent = totalRuns ? `${Math.round(reroutedCt/totalRuns*100)}% of ${totalRuns} runs` : 'No runs yet';
+
+    // SLA Compliance — % compliant from audit logs
+    const proceedCt   = decisions['PROCEED'] || 0;
+    const compliantPct = totalRuns ? Math.round((proceedCt / totalRuns) * 100) : 0;
+    const el3 = document.getElementById('mcSLA');
+    if (el3) el3.textContent = totalRuns ? compliantPct + '%' : '—';
+    const d3 = document.getElementById('mcSLADelta');
+    if (d3) d3.textContent = `${suppliers.total||0} suppliers · avg ${Math.round((suppliers.avg_reliability||0)*100)}% reliability`;
+
+    // Routes Mapped
+    const el4 = document.getElementById('mcRoutes');
+    if (el4) el4.textContent = routes.total || 0;
+    const d4 = document.getElementById('mcRoutesDelta');
+    if (d4) d4.textContent = `${routes.low_risk_routes||0} low-risk routes`;
+
+  } catch(e) {
+    // Leave as dashes on failure — non-critical
+  }
+}
 
 // Default SLA = 14 days out
 const dl=new Date(); dl.setDate(dl.getDate()+14);

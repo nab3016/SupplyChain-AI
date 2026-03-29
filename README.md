@@ -4,7 +4,7 @@ Multi-agent FastAPI backend with a self-contained HTML frontend.
 
 ## Stack
 - **Backend**: FastAPI + Uvicorn (Python 3.12)
-- **Frontend**: Single HTML file (`frontend/static/index.html`) — no Streamlit
+- **Frontend**: Single HTML file (`frontend/static/index.html`)
 - **LLM**: Google Gemini 2.5 Flash via `google-genai`
 - **Weather**: WeatherAPI.com live corridor data
 - **Data**: CSV-backed supplier & route databases
